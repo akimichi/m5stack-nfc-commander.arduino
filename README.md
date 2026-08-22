@@ -87,7 +87,7 @@ pio test -e native
 
 | 項目 | 既定値 | 候補 |
 |---|---|---|
-| Output mode | UID | UID / NDEF / UID+NDEF |
+| Output mode | UID | UID / NDEF / UID+NDEF / COMMAND |
 | UID case | UPPER | UPPER / lower |
 | UID separator | NONE | NONE / COLON / HYPHEN |
 | Field separator | TAB | TAB / SPACE / COMMA |
@@ -100,6 +100,34 @@ pio test -e native
 | Poll interval | 100 ms | 50 / 100 / 200 / 300 / 500 ms |
 
 `Output mode` が `NDEF` のとき、NDEF を取得できないカードでは UID を出力する。
+
+## カードごとの文字列送出
+
+カード UID と送出する文字列の対応表を SD カードに置くと、かざしたカードに応じた
+文字列を入力できる。出力モードを `COMMAND` にしたときだけ有効になる。
+
+SD カード直下に **`/nfc_commands.csv`** を置く。
+
+```csv
+# 行頭が # の行と空行は読み飛ばす
+04A2B3C4D5E680, Hello World
+A3:7A:1B:DD,    user@example.com
+0411223344,     a,b,c
+```
+
+- 1 列目は UID の 16 進表記。大文字小文字を問わず、`:` と `-` は無視する。
+- 2 列目以降が送出する文字列。**最初のカンマより後ろすべて**が値になるため、
+  文字列中にカンマを含められる。
+- 前後の空白は取り除かれる。値の内部の空白は保たれる。
+- 書式の誤った行は読み飛ばす。ファイル全体が無効になることはない。
+- 同じ UID が複数回現れた場合は後の行が優先される。
+- 登録できるのは 500 件まで。
+
+**未登録のカードは UID を出力する。** SD カードやファイルが無い場合も同様で、
+エラーにはならない。
+
+> 対応表は平文で保存される。SD カードを抜けば内容を読み取れるため、
+> パスワードなど秘匿性の高い文字列を登録する用途には適さない。
 
 ## 制限事項
 

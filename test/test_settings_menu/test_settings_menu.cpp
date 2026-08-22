@@ -74,7 +74,7 @@ void test_item_navigation_full_cycle(void)
 
 // --- 値の巡回 ---------------------------------------------------------------
 
-/// 出力モードは 3 つの値を巡回する
+/// 出力モードは 4 つの値を巡回する (F-12 で COMMAND を追加した)
 void test_output_mode_cycles(void)
 {
     Settings s;
@@ -85,6 +85,9 @@ void test_output_mode_cycles(void)
 
     advanceSettingItem(s, SettingItem::OutputMode);
     TEST_ASSERT_EQUAL(OutputMode::UidAndNdef, s.out_mode);
+
+    advanceSettingItem(s, SettingItem::OutputMode);
+    TEST_ASSERT_EQUAL(OutputMode::Command, s.out_mode);
 
     advanceSettingItem(s, SettingItem::OutputMode);
     TEST_ASSERT_EQUAL(OutputMode::UidOnly, s.out_mode);  // 先頭へ戻る

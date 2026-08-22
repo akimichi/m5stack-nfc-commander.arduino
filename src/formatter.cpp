@@ -50,7 +50,7 @@ std::string formatUid(const CardInfo& card, const UidCase uid_case, const UidSep
 }
 
 std::vector<std::string> buildOutputFields(const CardInfo& card, const std::string& ndef_text,
-                                           const FormatConfig& cfg)
+                                           const std::string& command_text, const FormatConfig& cfg)
 {
     std::vector<std::string> fields;
 
@@ -59,6 +59,15 @@ std::vector<std::string> buildOutputFields(const CardInfo& card, const std::stri
     const bool has_ndef   = !ndef_text.empty();
 
     switch (cfg.mode) {
+        case OutputMode::Command:
+            // 対応表にあればその文字列、無ければ UID を出す (F-12)
+            if (!command_text.empty()) {
+                fields.push_back(command_text);
+            } else if (has_uid) {
+                fields.push_back(uid);
+            }
+            break;
+
         case OutputMode::NdefOnly:
             // NDEF を取得できなければ UID にフォールバックする (F-04)
             if (has_ndef) {

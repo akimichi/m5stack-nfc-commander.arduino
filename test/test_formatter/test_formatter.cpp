@@ -104,7 +104,7 @@ void test_fields_uid_only_ignores_ndef(void)
     FormatConfig cfg;
     cfg.mode = OutputMode::UidOnly;
 
-    const auto fields = buildOutputFields(card, "hello", cfg);
+    const auto fields = buildOutputFields(card, "hello", "", cfg);
     TEST_ASSERT_EQUAL_UINT32(1, fields.size());
     TEST_ASSERT_EQUAL_STRING("A37A1BDD", fields[0].c_str());
 }
@@ -116,7 +116,7 @@ void test_fields_ndef_only(void)
     FormatConfig cfg;
     cfg.mode = OutputMode::NdefOnly;
 
-    const auto fields = buildOutputFields(card, "hello", cfg);
+    const auto fields = buildOutputFields(card, "hello", "", cfg);
     TEST_ASSERT_EQUAL_UINT32(1, fields.size());
     TEST_ASSERT_EQUAL_STRING("hello", fields[0].c_str());
 }
@@ -128,7 +128,7 @@ void test_fields_ndef_only_falls_back_to_uid(void)
     FormatConfig cfg;
     cfg.mode = OutputMode::NdefOnly;
 
-    const auto fields = buildOutputFields(card, "", cfg);
+    const auto fields = buildOutputFields(card, "", "", cfg);
     TEST_ASSERT_EQUAL_UINT32(1, fields.size());
     TEST_ASSERT_EQUAL_STRING("A37A1BDD", fields[0].c_str());
 }
@@ -140,7 +140,7 @@ void test_fields_uid_and_ndef(void)
     FormatConfig cfg;
     cfg.mode = OutputMode::UidAndNdef;
 
-    const auto fields = buildOutputFields(card, "hello", cfg);
+    const auto fields = buildOutputFields(card, "hello", "", cfg);
     TEST_ASSERT_EQUAL_UINT32(2, fields.size());
     TEST_ASSERT_EQUAL_STRING("A37A1BDD", fields[0].c_str());
     TEST_ASSERT_EQUAL_STRING("hello", fields[1].c_str());
@@ -153,7 +153,7 @@ void test_fields_uid_and_ndef_without_ndef(void)
     FormatConfig cfg;
     cfg.mode = OutputMode::UidAndNdef;
 
-    const auto fields = buildOutputFields(card, "", cfg);
+    const auto fields = buildOutputFields(card, "", "", cfg);
     TEST_ASSERT_EQUAL_UINT32(1, fields.size());
     TEST_ASSERT_EQUAL_STRING("A37A1BDD", fields[0].c_str());
 }
@@ -167,7 +167,7 @@ void test_fields_apply_uid_format(void)
     cfg.uid_case      = UidCase::Lower;
     cfg.uid_separator = UidSeparator::Hyphen;
 
-    const auto fields = buildOutputFields(card, "", cfg);
+    const auto fields = buildOutputFields(card, "", "", cfg);
     TEST_ASSERT_EQUAL_UINT32(1, fields.size());
     TEST_ASSERT_EQUAL_STRING("a3-7a-1b-dd", fields[0].c_str());
 }
@@ -179,7 +179,7 @@ void test_fields_empty_when_nothing_to_output(void)
     FormatConfig cfg;
     cfg.mode = OutputMode::UidOnly;
 
-    const auto fields = buildOutputFields(card, "", cfg);
+    const auto fields = buildOutputFields(card, "", "", cfg);
     TEST_ASSERT_EQUAL_UINT32(0, fields.size());
 }
 
@@ -190,9 +190,62 @@ void test_fields_ndef_without_uid(void)
     FormatConfig cfg;
     cfg.mode = OutputMode::UidAndNdef;
 
-    const auto fields = buildOutputFields(card, "hello", cfg);
+    const auto fields = buildOutputFields(card, "hello", "", cfg);
     TEST_ASSERT_EQUAL_UINT32(1, fields.size());
     TEST_ASSERT_EQUAL_STRING("hello", fields[0].c_str());
+}
+
+// --- F-12 COMMAND モード ----------------------------------------------------
+
+/// COMMAND: 対応表の文字列を出力する
+void test_fields_command_mode(void)
+{
+    const auto card = makeCard({0xA3, 0x7A, 0x1B, 0xDD});
+    FormatConfig cfg;
+    cfg.mode = OutputMode::Command;
+
+    const auto fields = buildOutputFields(card, "ndef", "mapped text", cfg);
+    TEST_ASSERT_EQUAL_UINT32(1, fields.size());
+    TEST_ASSERT_EQUAL_STRING("mapped text", fields[0].c_str());
+}
+
+/// COMMAND: 未登録のカードは UID にフォールバックする
+void test_fields_command_mode_falls_back_to_uid(void)
+{
+    const auto card = makeCard({0xA3, 0x7A, 0x1B, 0xDD});
+    FormatConfig cfg;
+    cfg.mode = OutputMode::Command;
+
+    const auto fields = buildOutputFields(card, "ndef", "", cfg);
+    TEST_ASSERT_EQUAL_UINT32(1, fields.size());
+    TEST_ASSERT_EQUAL_STRING("A37A1BDD", fields[0].c_str());
+}
+
+/// COMMAND: UID も対応表も無ければ出力しない
+void test_fields_command_mode_without_anything(void)
+{
+    CardInfo card;  // uid_size = 0
+    FormatConfig cfg;
+    cfg.mode = OutputMode::Command;
+
+    TEST_ASSERT_EQUAL_UINT32(0, buildOutputFields(card, "", "", cfg).size());
+}
+
+/// 他のモードでは対応表の文字列を使わない
+void test_other_modes_ignore_command_text(void)
+{
+    const auto card = makeCard({0xA3, 0x7A, 0x1B, 0xDD});
+    FormatConfig cfg;
+
+    cfg.mode          = OutputMode::UidOnly;
+    const auto uid_only = buildOutputFields(card, "", "mapped text", cfg);
+    TEST_ASSERT_EQUAL_UINT32(1, uid_only.size());
+    TEST_ASSERT_EQUAL_STRING("A37A1BDD", uid_only[0].c_str());
+
+    cfg.mode           = OutputMode::NdefOnly;
+    const auto ndef_only = buildOutputFields(card, "ndef", "mapped text", cfg);
+    TEST_ASSERT_EQUAL_UINT32(1, ndef_only.size());
+    TEST_ASSERT_EQUAL_STRING("ndef", ndef_only[0].c_str());
 }
 
 int main(int, char**)
@@ -214,5 +267,9 @@ int main(int, char**)
     RUN_TEST(test_fields_apply_uid_format);
     RUN_TEST(test_fields_empty_when_nothing_to_output);
     RUN_TEST(test_fields_ndef_without_uid);
+    RUN_TEST(test_fields_command_mode);
+    RUN_TEST(test_fields_command_mode_falls_back_to_uid);
+    RUN_TEST(test_fields_command_mode_without_anything);
+    RUN_TEST(test_other_modes_ignore_command_text);
     return UNITY_END();
 }

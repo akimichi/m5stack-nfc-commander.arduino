@@ -32,7 +32,7 @@ T clampNumber(const T value, const T min_value, const T max_value, const T defau
 void Settings::clampToValidRange()
 {
     // 列挙値。NVS から読んだ生の値が定義域を外れている場合に備える
-    out_mode        = clampEnum(out_mode, OutputMode::UidAndNdef, OutputMode::UidOnly);
+    out_mode        = clampEnum(out_mode, OutputMode::Command, OutputMode::UidOnly);
     uid_case        = clampEnum(uid_case, UidCase::Lower, UidCase::Upper);
     uid_separator   = clampEnum(uid_separator, UidSeparator::Hyphen, UidSeparator::None);
     field_separator = clampEnum(field_separator, FieldSeparator::Comma, FieldSeparator::Tab);

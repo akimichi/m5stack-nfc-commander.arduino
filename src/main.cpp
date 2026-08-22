@@ -6,7 +6,7 @@
  *
  * 仕様書: docs/specification.md
  *
- * 実装段階: S-9 (エラー処理と自動復旧)
+ * 実装段階: S-10 (カードごとの文字列送出)
  */
 #include <M5Unified.h>
 
@@ -28,6 +28,8 @@
 #error "ARDUINO_USB_CDC_ON_BOOT is not defined. build_unflags may have removed it"
 #endif
 
+#include "command_map.h"
+#include "command_store.h"
 #include "debounce.h"
 #include "formatter.h"
 #include "hid_output.h"
@@ -52,6 +54,10 @@ uint32_t g_read_count{0};
 nfccmd::Settings g_settings;
 nfccmd::SettingsStore g_store;
 
+// カード UID と送出文字列の対応表 (F-12)。起動時に SD カードから読み込む
+nfccmd::CommandMap g_commands;
+nfccmd::CommandStore g_command_store;
+
 /// 出力モードの表示ラベル (F-08)
 const char* outputModeLabel(const nfccmd::OutputMode mode)
 {
@@ -60,6 +66,8 @@ const char* outputModeLabel(const nfccmd::OutputMode mode)
             return "NDEF";
         case nfccmd::OutputMode::UidAndNdef:
             return "UID+NDEF";
+        case nfccmd::OutputMode::Command:
+            return "COMMAND";
         case nfccmd::OutputMode::UidOnly:
         default:
             return "UID";
@@ -214,6 +222,12 @@ void setup()
     }
     applySettings();
 
+    // 対応表を読み込む。SD カードやファイルが無くてもエラーとはしない (F-12)
+    const auto loaded = g_command_store.load(g_commands);
+    if (loaded.loaded > 0 || loaded.skipped > 0) {
+        g_ui.showMessage(std::to_string(loaded.loaded) + " commands loaded");
+    }
+
     M5_LOGI("%s %s started", kAppName, kAppVersion);
 
     if (g_reader.begin()) {
@@ -309,7 +323,9 @@ void loop()
                 std::string ndef_text{};
                 bool ndef_truncated{false};
                 auto ndef_status = nfccmd::NdefStatus::Ok;
-                if (g_settings.out_mode != nfccmd::OutputMode::UidOnly) {
+                const bool needs_ndef = (g_settings.out_mode == nfccmd::OutputMode::NdefOnly) ||
+                                        (g_settings.out_mode == nfccmd::OutputMode::UidAndNdef);
+                if (needs_ndef) {
                     const auto ndef = g_reader.readNdefText();
                     ndef_status     = ndef.status;
                     if (ndef.available) {
@@ -321,15 +337,25 @@ void loop()
                     }
                 }
 
+                // COMMAND モードのときだけ対応表を引く (F-12)
+                std::string command_text{};
+                if (g_settings.out_mode == nfccmd::OutputMode::Command) {
+                    if (const auto* mapped = g_commands.find(card)) {
+                        command_text = *mapped;
+                    } else {
+                        M5_LOGI("COMMAND not registered, falling back to UID");
+                    }
+                }
+
                 const auto format   = g_settings.toFormatConfig();
                 const auto uid_text = nfccmd::formatUid(card, format.uid_case, format.uid_separator);
-                const auto fields   = nfccmd::buildOutputFields(card, ndef_text, format);
+                const auto fields   = nfccmd::buildOutputFields(card, ndef_text, command_text, format);
                 ++g_read_count;
 
                 M5_LOGI("CARD uid=%s size=%u type=%s atqa=%04X sak=%02X", uid_text.c_str(), card.uid_size,
                         card.type_name.c_str(), card.atqa, card.sak);
 
-                g_ui.showCard(uid_text, card.type_name, ndef_text);
+                g_ui.showCard(uid_text, card.type_name, command_text.empty() ? ndef_text : command_text);
                 g_ui.setCount(g_read_count);
 
                 if (!g_output_enabled) {

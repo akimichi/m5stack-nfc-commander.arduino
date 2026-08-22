@@ -78,6 +78,8 @@ std::string settingItemValueText(const Settings& settings, const SettingItem ite
                     return "NDEF";
                 case OutputMode::UidAndNdef:
                     return "UID+NDEF";
+                case OutputMode::Command:
+                    return "COMMAND";
                 case OutputMode::UidOnly:
                 default:
                     return "UID";
@@ -146,7 +148,7 @@ void advanceSettingItem(Settings& settings, const SettingItem item)
 {
     switch (item) {
         case SettingItem::OutputMode:
-            settings.out_mode = nextEnum(settings.out_mode, OutputMode::UidAndNdef);
+            settings.out_mode = nextEnum(settings.out_mode, OutputMode::Command);
             break;
         case SettingItem::UidCase:
             settings.uid_case = nextEnum(settings.uid_case, UidCase::Lower);

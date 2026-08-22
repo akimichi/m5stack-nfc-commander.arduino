@@ -37,6 +37,7 @@ enum class OutputMode : uint8_t {
     UidOnly,     //!< UID のみ (既定)
     NdefOnly,    //!< NDEF テキストのみ。取得できなければ UID にフォールバックする
     UidAndNdef,  //!< UID と NDEF テキスト。NDEF が無ければ UID のみ
+    Command,     //!< 対応表に登録した文字列。未登録なら UID (F-12)
 };
 
 struct FormatConfig {
@@ -52,12 +53,13 @@ struct FormatConfig {
 std::string formatUid(const CardInfo& card, UidCase uid_case, UidSeparator separator);
 
 /*!
-  @brief 出力するフィールドの並びを組み立てる (F-04)
+  @brief 出力するフィールドの並びを組み立てる (F-04 / F-12)
   @param card 読み取ったカード
   @param ndef_text NDEF から取得したテキスト。取得できなかった場合は空文字列
+  @param command_text 対応表に登録された文字列。未登録なら空文字列
   @return 出力フィールドの並び。出力すべきものが無ければ空
  */
 std::vector<std::string> buildOutputFields(const CardInfo& card, const std::string& ndef_text,
-                                           const FormatConfig& cfg);
+                                           const std::string& command_text, const FormatConfig& cfg);
 
 }  // namespace nfccmd
