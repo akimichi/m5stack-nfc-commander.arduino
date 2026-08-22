@@ -105,12 +105,6 @@ public:
      */
     NdefReadResult readNdefText();
 
-    /*!
-      @brief 直近に検出したカードが、まだ電界内に存在するか
-      @note カード離脱の検知 (仕様書 F-06) に用いる
-     */
-    bool isCardStillPresent();
-
     /// カードを非活性化し、次の検出に備える
     void release();
 

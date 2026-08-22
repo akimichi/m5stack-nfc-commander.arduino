@@ -94,7 +94,8 @@ constexpr uint8_t kBusReleaseEvery     = 3;     //!< 何回に 1 回 I2C バス�
 uint32_t g_last_reinit_ms{0};
 uint32_t g_last_health_ms{0};
 uint8_t g_health_failures{0};
-uint8_t g_reinit_attempts{0};
+uint8_t g_reinit_attempts{0};  //!< 上限で飽和させる。試行が続いても巻き戻らないようにする
+uint8_t g_reinit_cycle{0};     //!< バス解放の周期判定用。飽和カウンタとは分けて持つ
 
 // 同じ異常状態が続く間、警告音とメッセージを繰り返さないために保持する。
 // 正常検出の連打抑止は ReadDebouncer が担当する (F-06)。
@@ -105,6 +106,7 @@ void onUnitReady()
 {
     g_health_failures = 0;
     g_reinit_attempts = 0;
+    g_reinit_cycle    = 0;
     g_ui.setUnitReady(true);
     g_ui.showMessage("");
     g_ui.beepDetect();
@@ -116,6 +118,7 @@ void onUnitLost()
 {
     g_health_failures = 0;
     g_reinit_attempts = 0;
+    g_reinit_cycle    = 0;
 
     M5_LOGW("unit stopped responding");
     g_ui.setUnitReady(false);
@@ -260,12 +263,17 @@ void loop()
     if (!g_reader.ready()) {
         if (millis() - g_last_reinit_ms >= kReinitIntervalMs) {
             g_last_reinit_ms = millis();
-            ++g_reinit_attempts;
+
+            // 試行回数は上限で飽和させる。8bit のまま加算し続けると一定時間後に
+            // 巻き戻り、下の「電源再投入」の案内が消えてしまう
+            if (g_reinit_attempts < UINT8_MAX) {
+                ++g_reinit_attempts;
+            }
+            g_reinit_cycle = static_cast<uint8_t>((g_reinit_cycle + 1) % kBusReleaseEvery);
 
             // 単に未接続なだけなら begin() で足りる。何度も失敗する場合は
             // バスがスレーブに掴まれている可能性があるため解放も試す
-            const bool recovered = (g_reinit_attempts % kBusReleaseEvery == 0) ? g_reader.recover()
-                                                                              : g_reader.begin();
+            const bool recovered = (g_reinit_cycle == 0) ? g_reader.recover() : g_reader.begin();
             if (recovered) {
                 onUnitReady();
             } else if (g_reinit_attempts >= kBusReleaseEvery * 3) {

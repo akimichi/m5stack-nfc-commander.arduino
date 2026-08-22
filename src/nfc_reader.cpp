@@ -70,10 +70,14 @@ void releaseI2CBus()
     pinMode(sda, INPUT_PULLUP);
     delayMicroseconds(5);
 
-    Wire.begin(sda, scl);
+    // クロックを指定せずに開くと既定値になってしまうため、
+    // ユニットに設定されている周波数で開き直す
+    const uint32_t clock = g_unit.component_config().clock;
+    Wire.begin(sda, scl, clock);
+    M5_LOGI("nfc_reader: I2C reopened (clock=%lu)", static_cast<unsigned long>(clock));
 }
 
-// 直近に検出したカード。離脱検知 (isCardStillPresent) で参照する
+// 直近に検出したカード。NDEF 読み出し時の再活性化で参照する
 m5::nfc::a::PICC g_last_picc{};
 bool g_has_last_picc{false};
 
@@ -367,14 +371,6 @@ NdefReadResult NfcReader::readNdefText()
     }
 
     return result;
-}
-
-bool NfcReader::isCardStillPresent()
-{
-    if (!ready_ || !g_has_last_picc) {
-        return false;
-    }
-    return g_nfc_a.isActive(g_last_picc);
 }
 
 bool NfcReader::isAlive()
