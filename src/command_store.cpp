@@ -55,7 +55,6 @@ CommandStore::LoadResult CommandStore::load(CommandMap& map)
     if (!SD.begin(cs, SPI, kSpiClock)) {
         // カードが挿さっていないだけなのでエラーとはしない (F-12)
         M5_LOGI("command_store: SD card not available");
-        SPI.end();
         return result;
     }
     result.sd_available = true;
@@ -64,7 +63,6 @@ CommandStore::LoadResult CommandStore::load(CommandMap& map)
     if (!file) {
         M5_LOGI("command_store: %s not found", kFilePath);
         SD.end();
-        SPI.end();
         return result;
     }
     result.file_found = true;
@@ -83,9 +81,11 @@ CommandStore::LoadResult CommandStore::load(CommandMap& map)
 
     file.close();
 
-    // LCD と SPI を共有するため、読み終えたらバスを解放する
+    // SD のマウントだけ解除する。
+    // CoreS3 は LCD (M5GFX) と SD が同じ SPI バスを共有しており、
+    // M5GFX がバスを保持したまま SPI.end() を呼ぶと解放処理から戻らず停止する。
+    // そのため SPI バスは開いたままにしておく
     SD.end();
-    SPI.end();
 
     M5_LOGI("command_store: %u entries loaded, %u lines skipped", static_cast<unsigned>(result.loaded),
             static_cast<unsigned>(result.skipped));

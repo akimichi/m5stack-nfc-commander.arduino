@@ -32,9 +32,8 @@ FeliCa (NFC-F)、ISO/IEC 14443 Type B、ISO/IEC 15693 は対象外である。
 PlatformIO CLI を使う。
 
 ```bash
-# 開発ビルド (USB HID + USB CDC。シリアルログを見られる)
+# 開発ビルド (USB HID + USB CDC)
 pio run -e debug -t upload
-pio device monitor
 
 # 製品ビルド (USB HID のみ。PC に COM ポートが見えない)
 pio run -e release -t upload
@@ -43,8 +42,18 @@ pio run -e release -t upload
 pio test -e native
 ```
 
-書き込みに失敗する場合は、電源ボタンを約6秒長押しして電源を切り、
-リセットボタンを押しながら電源を入れてダウンロードモードで起動する。
+**書き込みには手動でダウンロードモードに入れる必要がある。**
+`ARDUINO_USB_MODE=0` の実機では esptool の自動リセットが効かないため、
+そのまま `-t upload` すると `Failed to connect to ESP32-S3` で失敗する。
+
+1. USB を接続したまま、電源ボタン (左側面) を押し続ける
+2. **緑の LED が点灯した瞬間に離す** (およそ3秒。長すぎると電源が切れる)
+3. `pio run -e debug -t upload` を実行する
+4. 書き込み後は自動で復帰しないので、電源ボタンを短く押して起動する
+
+**シリアルログは読めない。** ログは ESP-IDF のコンソール (UART0) に出る一方、
+USB は TinyUSB が占有しているため、`pio device monitor` には何も流れてこない。
+実機の状態は LCD 表示で確認する。
 
 ## 操作
 
