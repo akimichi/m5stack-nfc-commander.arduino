@@ -389,9 +389,9 @@ SD カード直下の **`/nfc_commands.csv`** を起動時に読み込む。
 
 ```csv
 # 行頭が # の行と空行は読み飛ばす
-04A2B3C4D5E6,Hello World
+04A2B3C4D5E680,Hello World
 A3:7A:1B:DD,user@example.com
-0411223344,  前後の空白は取り除く
+04112233445566,  trimmed value
 ```
 
 - 1 列目は UID の 16 進表記。大文字小文字を問わず、`:` と `-` は無視する。
