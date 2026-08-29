@@ -27,6 +27,7 @@ enum class SettingItem : uint8_t {
     KeyDelay,
     Layout,
     NonAscii,
+    KeySeq,
     Debounce,
     AbsentThreshold,
     PollInterval,

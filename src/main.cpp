@@ -367,11 +367,21 @@ void loop()
                     }
                     g_ui.beepSuppressed();
                 } else {
-                    const auto sent = g_hid.send(fields);
+                    // キーシーケンスを解釈するのは対応表の値だけである (F-13)。
+                    // NDEF は第三者が書き込めるため、フォールバックの UID も含めて
+                    // 通常の文字列として送る
+                    const bool as_sequence =
+                        g_settings.key_seq == nfccmd::KeySeqMode::On && !command_text.empty();
+                    const auto sent = as_sequence ? g_hid.sendSequence(command_text) : g_hid.send(fields);
                     if (!sent.sent) {
                         // UID は必ず ASCII なので、送れない原因は PC 未接続に限られる
                         M5_LOGW("HID send failed: USB not connected");
                         g_ui.showMessage("PC not connected", true);
+                        g_ui.beepWarn();
+                    } else if (sent.parse_error) {
+                        // 解析できないトークンは literal として打鍵済みである (F-13)
+                        M5_LOGW("key sequence parse error in \"%s\"", command_text.c_str());
+                        g_ui.showMessage("bad key token", true);
                         g_ui.beepWarn();
                     } else if (sent.dropped_bytes != 0) {
                         // 打鍵できない文字を取り除いたことを知らせる (F-05 / F-09)

@@ -28,6 +28,7 @@ constexpr const char* kKeyNonAscii  = "nonascii";
 constexpr const char* kKeyDebounce  = "debounce";
 constexpr const char* kKeyAbsentTh  = "absent_th";
 constexpr const char* kKeyPollMs    = "poll_ms";
+constexpr const char* kKeyKeySeq    = "key_seq";
 
 template <typename E>
 uint8_t toU8(const E value)
@@ -68,6 +69,7 @@ bool SettingsStore::load(Settings& out)
     s.debounce_ms     = prefs.getUShort(kKeyDebounce, defaults.debounce_ms);
     s.absent_threshold = prefs.getUChar(kKeyAbsentTh, defaults.absent_threshold);
     s.poll_ms          = prefs.getUShort(kKeyPollMs, defaults.poll_ms);
+    s.key_seq          = static_cast<KeySeqMode>(prefs.getUChar(kKeyKeySeq, toU8(defaults.key_seq)));
     prefs.end();
 
     // 壊れた値が混ざっていても起動できるようにする (F-10)
@@ -96,6 +98,7 @@ bool SettingsStore::save(const Settings& settings)
     prefs.putUShort(kKeyDebounce, settings.debounce_ms);
     prefs.putUChar(kKeyAbsentTh, settings.absent_threshold);
     prefs.putUShort(kKeyPollMs, settings.poll_ms);
+    prefs.putUChar(kKeyKeySeq, toU8(settings.key_seq));
     prefs.end();
 
     M5_LOGI("settings_store: saved");

@@ -14,6 +14,7 @@
 
 #include "hid_layout.h"
 #include "hid_sanitize.h"
+#include "key_sequence.h"
 
 namespace nfccmd {
 
@@ -35,6 +36,7 @@ enum class TerminatorKey : uint8_t {
 struct HidSendResult {
     bool sent{false};           //!< 実際に打鍵したか
     uint16_t dropped_bytes{0};  //!< 打鍵できず取り除いたバイト数
+    bool parse_error{false};    //!< 解析できないトークンがあったか (F-13)
 };
 
 class HidOutput {
@@ -80,12 +82,29 @@ public:
      */
     HidSendResult send(const std::vector<std::string>& fields);
 
+    /*!
+      @brief 対応表の値をキーシーケンスとして打鍵する (F-13)
+      @param value 対応表に登録された文字列
+      @note `{CTRL+C}` などのトークンをキーストロークとして送る。literal 部分には
+            F-05 のサニタイズを適用する。キーストロークを 1 つも送らなかった場合は
+            終端キーも送らず sent=false を返す。
+            解析できないトークンがあった場合はその範囲を literal として打鍵し、
+            parse_error を立てる。
+     */
+    HidSendResult sendSequence(const std::string& value);
+
 private:
     /// 1 キー送出し、設定された間隔だけ待つ
     void writeKey(uint8_t key);
 
     /// 1 文字をレイアウトに応じて打鍵する
     void writeChar(char c);
+
+    /// 修飾キーを伴う 1 キーストロークを打鍵する (F-13)
+    void writeChord(const SeqItem& item);
+
+    /// 設定された終端キーを送る (F-04)
+    void writeTerminator();
 
     Config cfg_{};
 };

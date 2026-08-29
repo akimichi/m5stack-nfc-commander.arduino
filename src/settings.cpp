@@ -39,6 +39,7 @@ void Settings::clampToValidRange()
     terminator      = clampEnum(terminator, TerminatorKey::Tab, TerminatorKey::Enter);
     layout          = clampEnum(layout, KeyboardLayout::JIS, KeyboardLayout::US);
     non_ascii       = clampEnum(non_ascii, NonAsciiPolicy::Replace, NonAsciiPolicy::Drop);
+    key_seq         = clampEnum(key_seq, KeySeqMode::On, KeySeqMode::Off);
 
     // 数値。0 が正当な設定である項目 (key_delay_ms, debounce_ms) は下限を 0 とする
     key_delay_ms = clampNumber<uint16_t>(key_delay_ms, 0, SettingsLimits::kKeyDelayMax, 8);

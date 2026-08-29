@@ -11,8 +11,11 @@ namespace nfccmd {
 
 namespace {
 
-//! 左 Shift の HID Usage ID
+//! 修飾キーの HID Usage ID
+constexpr uint8_t kHidLeftCtrl  = 0xE0;
 constexpr uint8_t kHidLeftShift = 0xE1;
+constexpr uint8_t kHidLeftAlt   = 0xE2;
+constexpr uint8_t kHidLeftGui   = 0xE3;
 
 /*
  * USBHIDKeyboard のコンストラクタが HID インターフェースを USB ディスクリプタへ
@@ -121,6 +124,14 @@ HidSendResult HidOutput::send(const std::vector<std::string>& fields)
         }
     }
 
+    writeTerminator();
+
+    result.sent = true;
+    return result;
+}
+
+void HidOutput::writeTerminator()
+{
     switch (cfg_.terminator) {
         case TerminatorKey::Enter:
             writeKey(KEY_RETURN);
@@ -132,6 +143,94 @@ HidSendResult HidOutput::send(const std::vector<std::string>& fields)
         default:
             break;
     }
+}
+
+void HidOutput::writeChord(const SeqItem& item)
+{
+    // 修飾キーは HID Usage ID で押す。レイアウトによらず位置は同じである
+    if ((item.modifiers & kModCtrl) != 0) {
+        g_keyboard.pressRaw(kHidLeftCtrl);
+    }
+    if ((item.modifiers & kModShift) != 0) {
+        g_keyboard.pressRaw(kHidLeftShift);
+    }
+    if ((item.modifiers & kModAlt) != 0) {
+        g_keyboard.pressRaw(kHidLeftAlt);
+    }
+    if ((item.modifiers & kModGui) != 0) {
+        g_keyboard.pressRaw(kHidLeftGui);
+    }
+
+    if (item.keycode != 0) {
+        // 特殊キーの Usage ID も US / JIS で共通である
+        g_keyboard.pressRaw(item.keycode);
+    } else if (cfg_.layout == KeyboardLayout::JIS) {
+        const auto stroke = asciiToJisKeyStroke(item.ascii);
+        if (stroke.valid()) {
+            if (stroke.shift) {
+                g_keyboard.pressRaw(kHidLeftShift);
+            }
+            g_keyboard.pressRaw(stroke.keycode);
+        }
+    } else {
+        // US 配列では USBHIDKeyboard の ASCII 変換表に任せる。
+        // Shift が要る記号は press() が自分で付ける
+        g_keyboard.press(static_cast<uint8_t>(item.ascii));
+    }
+
+    g_keyboard.releaseAll();
+
+    if (cfg_.key_delay_ms != 0) {
+        delay(cfg_.key_delay_ms);
+    }
+}
+
+HidSendResult HidOutput::sendSequence(const std::string& value)
+{
+    HidSendResult result;
+
+    const auto seq     = parseKeySequence(value);
+    result.parse_error = seq.has_error;
+
+    // literal 部分にだけサニタイズを適用する (F-13)。
+    // トークンをまたいで連続した範囲外バイトが 1 個の '?' にまとまらないよう、
+    // literal は要素ごとに処理する
+    std::vector<SeqItem> items;
+    items.reserve(seq.items.size());
+    for (const auto& item : seq.items) {
+        if (item.kind == SeqItemKind::Chord) {
+            items.push_back(item);
+            continue;
+        }
+        const auto s         = sanitizeForHid(item.literal, cfg_.non_ascii);
+        result.dropped_bytes = static_cast<uint16_t>(result.dropped_bytes + s.dropped_bytes);
+        if (s.text.empty()) {
+            continue;
+        }
+        SeqItem literal = item;
+        literal.literal = s.text;
+        items.push_back(literal);
+    }
+
+    // キーストロークを 1 つも送らないなら終端キーも送らない (F-05 / F-13)
+    if (items.empty()) {
+        return result;
+    }
+    if (!isConnected()) {
+        return result;
+    }
+
+    for (const auto& item : items) {
+        if (item.kind == SeqItemKind::Chord) {
+            writeChord(item);
+            continue;
+        }
+        for (const char c : item.literal) {
+            writeChar(c);
+        }
+    }
+
+    writeTerminator();
 
     result.sent = true;
     return result;

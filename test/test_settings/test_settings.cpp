@@ -12,6 +12,7 @@ namespace {
 
 using nfccmd::FieldSeparator;
 using nfccmd::KeyboardLayout;
+using nfccmd::KeySeqMode;
 using nfccmd::NonAsciiPolicy;
 using nfccmd::OutputMode;
 using nfccmd::Settings;
@@ -43,6 +44,8 @@ void test_default_values(void)
     TEST_ASSERT_EQUAL_UINT16(8, s.key_delay_ms);
     TEST_ASSERT_EQUAL(KeyboardLayout::US, s.layout);
     TEST_ASSERT_EQUAL(NonAsciiPolicy::Drop, s.non_ascii);
+    // キーシーケンスは既定 OFF である (F-13 / §8-7)
+    TEST_ASSERT_EQUAL(KeySeqMode::Off, s.key_seq);
     TEST_ASSERT_EQUAL_UINT16(500, s.debounce_ms);
     TEST_ASSERT_EQUAL_UINT8(3, s.absent_threshold);
     TEST_ASSERT_EQUAL_UINT16(100, s.poll_ms);
@@ -100,6 +103,7 @@ void test_invalid_enums_are_reset(void)
     s.terminator      = static_cast<TerminatorKey>(99);
     s.layout          = static_cast<KeyboardLayout>(99);
     s.non_ascii       = static_cast<NonAsciiPolicy>(99);
+    s.key_seq         = static_cast<KeySeqMode>(99);
     s.clampToValidRange();
 
     TEST_ASSERT_EQUAL(OutputMode::UidOnly, s.out_mode);
@@ -109,6 +113,7 @@ void test_invalid_enums_are_reset(void)
     TEST_ASSERT_EQUAL(TerminatorKey::Enter, s.terminator);
     TEST_ASSERT_EQUAL(KeyboardLayout::US, s.layout);
     TEST_ASSERT_EQUAL(NonAsciiPolicy::Drop, s.non_ascii);
+    TEST_ASSERT_EQUAL(KeySeqMode::Off, s.key_seq);
 }
 
 /// 上限を超えた打鍵間隔は既定値に戻る

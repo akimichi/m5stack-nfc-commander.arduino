@@ -58,6 +58,8 @@ const char* settingItemLabel(const SettingItem item)
             return "Layout";
         case SettingItem::NonAscii:
             return "Non-ASCII";
+        case SettingItem::KeySeq:
+            return "Key seq";
         case SettingItem::Debounce:
             return "Debounce";
         case SettingItem::AbsentThreshold:
@@ -130,6 +132,9 @@ std::string settingItemValueText(const Settings& settings, const SettingItem ite
         case SettingItem::NonAscii:
             return (settings.non_ascii == NonAsciiPolicy::Replace) ? "REPLACE" : "DROP";
 
+        case SettingItem::KeySeq:
+            return (settings.key_seq == KeySeqMode::On) ? "ON" : "OFF";
+
         case SettingItem::Debounce:
             return std::to_string(settings.debounce_ms) + " ms";
 
@@ -170,6 +175,9 @@ void advanceSettingItem(Settings& settings, const SettingItem item)
             break;
         case SettingItem::NonAscii:
             settings.non_ascii = nextEnum(settings.non_ascii, NonAsciiPolicy::Replace);
+            break;
+        case SettingItem::KeySeq:
+            settings.key_seq = nextEnum(settings.key_seq, KeySeqMode::On);
             break;
         case SettingItem::Debounce:
             settings.debounce_ms = nextChoice(settings.debounce_ms, kDebounceChoices);

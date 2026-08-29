@@ -14,6 +14,7 @@
 #include "debounce.h"
 #include "formatter.h"
 #include "hid_output.h"
+#include "key_sequence.h"
 
 namespace nfccmd {
 
@@ -40,6 +41,11 @@ struct Settings {
     uint16_t key_delay_ms{8};
     KeyboardLayout layout{KeyboardLayout::US};
     NonAsciiPolicy non_ascii{NonAsciiPolicy::Drop};
+
+    // キーシーケンス送出 (F-13)
+    // 既定を OFF にするのは、SD カードを差し替えるだけで PC に任意のキー操作を
+    // 送れるようになるためである (§8-7)
+    KeySeqMode key_seq{KeySeqMode::Off};
 
     // 読み取り (F-01 / F-06)
     uint16_t debounce_ms{500};

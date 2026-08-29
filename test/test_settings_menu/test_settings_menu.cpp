@@ -12,6 +12,7 @@ namespace {
 using nfccmd::advanceSettingItem;
 using nfccmd::kSettingItemCount;
 using nfccmd::KeyboardLayout;
+using nfccmd::KeySeqMode;
 using nfccmd::NonAsciiPolicy;
 using nfccmd::nextSettingItem;
 using nfccmd::OutputMode;
@@ -111,6 +112,11 @@ void test_two_value_items_toggle(void)
     TEST_ASSERT_EQUAL(NonAsciiPolicy::Replace, s.non_ascii);
     advanceSettingItem(s, SettingItem::NonAscii);
     TEST_ASSERT_EQUAL(NonAsciiPolicy::Drop, s.non_ascii);
+
+    advanceSettingItem(s, SettingItem::KeySeq);
+    TEST_ASSERT_EQUAL(KeySeqMode::On, s.key_seq);
+    advanceSettingItem(s, SettingItem::KeySeq);
+    TEST_ASSERT_EQUAL(KeySeqMode::Off, s.key_seq);
 }
 
 /*!
