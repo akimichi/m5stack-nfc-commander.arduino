@@ -96,6 +96,7 @@ HidSendResult HidOutput::send(const std::vector<std::string>& fields)
         return result;
     }
     if (!isConnected()) {
+        result.not_connected = true;
         return result;
     }
 
@@ -217,6 +218,7 @@ HidSendResult HidOutput::sendSequence(const std::string& value)
         return result;
     }
     if (!isConnected()) {
+        result.not_connected = true;
         return result;
     }
 

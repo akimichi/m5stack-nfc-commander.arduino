@@ -373,10 +373,16 @@ void loop()
                     const bool as_sequence =
                         g_settings.key_seq == nfccmd::KeySeqMode::On && !command_text.empty();
                     const auto sent = as_sequence ? g_hid.sendSequence(command_text) : g_hid.send(fields);
-                    if (!sent.sent) {
-                        // UID は必ず ASCII なので、送れない原因は PC 未接続に限られる
+                    if (sent.not_connected) {
                         M5_LOGW("HID send failed: USB not connected");
                         g_ui.showMessage("PC not connected", true);
+                        g_ui.beepWarn();
+                    } else if (!sent.sent) {
+                        // サニタイズの結果、打鍵できる文字が残らなかった (F-05)。
+                        // 終端キーも送っていないので、PC には何も入力されていない
+                        M5_LOGW("HID send skipped: nothing printable (%u bytes dropped)",
+                                static_cast<unsigned>(sent.dropped_bytes));
+                        g_ui.showMessage("no printable text", true);
                         g_ui.beepWarn();
                     } else if (sent.parse_error) {
                         // 解析できないトークンは literal として打鍵済みである (F-13)

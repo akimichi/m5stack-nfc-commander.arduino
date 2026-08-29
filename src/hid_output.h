@@ -37,6 +37,14 @@ struct HidSendResult {
     bool sent{false};           //!< 実際に打鍵したか
     uint16_t dropped_bytes{0};  //!< 打鍵できず取り除いたバイト数
     bool parse_error{false};    //!< 解析できないトークンがあったか (F-13)
+
+    /*!
+      PC と接続されておらず打鍵を諦めたか (F-11)
+
+      sent が false になる理由は「PC 未接続」と「送るものが残らなかった」の
+      2 つがあり、呼び出し側が区別できるようにする。
+     */
+    bool not_connected{false};
 };
 
 class HidOutput {
